@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/estatemanagement",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\EstateManagement\\": "app/",
+            "Modules\\EstateManagement\\Database\\Factories\\": "database/factories/",
+            "Modules\\EstateManagement\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\EstateManagement\\Tests\\": "tests/"
+        }
+    }
+}

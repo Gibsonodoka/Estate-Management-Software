@@ -1,0 +1,10 @@
+{
+    "Core": true,
+    "UserManagement": true,
+    "GeneralListing": true,
+    "Messaging": true,
+    "PaymentProcessing": true,
+    "Security": true,
+    "Analytics": true,
+    "EstateManagement": true
+}

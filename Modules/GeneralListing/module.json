@@ -1,0 +1,11 @@
+{
+    "name": "GeneralListing",
+    "alias": "generallisting",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\GeneralListing\\Providers\\GeneralListingServiceProvider"
+    ],
+    "files": []
+}

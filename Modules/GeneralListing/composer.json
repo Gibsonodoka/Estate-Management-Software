@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/generallisting",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\GeneralListing\\": "app/",
+            "Modules\\GeneralListing\\Database\\Factories\\": "database/factories/",
+            "Modules\\GeneralListing\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\GeneralListing\\Tests\\": "tests/"
+        }
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/paymentprocessing",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\PaymentProcessing\\": "app/",
+            "Modules\\PaymentProcessing\\Database\\Factories\\": "database/factories/",
+            "Modules\\PaymentProcessing\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\PaymentProcessing\\Tests\\": "tests/"
+        }
+    }
+}

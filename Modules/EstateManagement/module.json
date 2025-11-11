@@ -1,0 +1,11 @@
+{
+    "name": "EstateManagement",
+    "alias": "estatemanagement",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\EstateManagement\\Providers\\EstateManagementServiceProvider"
+    ],
+    "files": []
+}
