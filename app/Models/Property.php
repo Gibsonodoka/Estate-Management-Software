@@ -12,29 +12,40 @@ class Property extends Model
 
     protected $fillable = [
         'estate_id',
-        'landlord_id',
-        'property_number',
-        'street',
+        'landlord_id', // Now references Landlord model instead of User model
+        'property_name',
         'property_type',
-        'bedrooms',
-        'bathrooms',
-        'rent_amount',
+        'units',
+        'bedrooms_per_unit',
+        'bathrooms_per_unit',
+        'size_sqm',
+        'size_unit',
+        'street',
+        'street_name',
+        'street_number',
+        'rent_amount_per_unit',
         'rent_period',
         'status',
-        'is_listed',
         'description',
-        'size_sqm',
+        'utilities_included',
         'features',
         'floor_number',
         'available_from',
+        'is_listed',
+        'old_landlord_id', // Temporary field for migration
     ];
 
     protected $casts = [
-        'rent_amount' => 'decimal:2',
+        'rent_amount_per_unit' => 'decimal:2',
         'size_sqm' => 'decimal:2',
         'is_listed' => 'boolean',
+        'utilities_included' => 'array',
         'features' => 'array',
         'available_from' => 'date',
+        'units' => 'integer',
+        'bedrooms_per_unit' => 'integer',
+        'bathrooms_per_unit' => 'integer',
+        'floor_number' => 'integer',
     ];
 
     // Relationships
@@ -43,9 +54,23 @@ class Property extends Model
         return $this->belongsTo(Estate::class);
     }
 
+    /**
+     * Get the landlord that owns the property.
+     * Now references the Landlord model instead of User model.
+     */
     public function landlord()
     {
-        return $this->belongsTo(User::class, 'landlord_id');
+        return $this->belongsTo(Landlord::class, 'landlord_id');
+    }
+
+    /**
+     * Get the landlord user associated with this property.
+     * This provides backward compatibility and a convenient way
+     * to access the user who is the landlord.
+     */
+    public function landlordUser()
+    {
+        return $this->landlord ? $this->landlord->user : null;
     }
 
     public function tenants()
@@ -53,9 +78,9 @@ class Property extends Model
         return $this->hasMany(Tenant::class);
     }
 
-    public function currentTenant()
+    public function activeTenants()
     {
-        return $this->hasOne(Tenant::class)->where('status', 'active');
+        return $this->hasMany(Tenant::class)->where('status', 'active');
     }
 
     public function maintenanceRequests()
@@ -73,15 +98,69 @@ class Property extends Model
         return $this->hasMany(PaymentRecord::class);
     }
 
-    // Scopes
-    public function scopeVacant($query)
+    // Computed Attributes
+    public function getTotalBedroomsAttribute()
     {
-        return $query->where('status', 'vacant');
+        if ($this->units && $this->bedrooms_per_unit) {
+            return $this->units * $this->bedrooms_per_unit;
+        }
+        return null;
+    }
+
+    public function getTotalRentPotentialAttribute()
+    {
+        return $this->units * $this->rent_amount_per_unit;
+    }
+
+    public function getOccupiedUnitsAttribute()
+    {
+        return $this->activeTenants()->count();
+    }
+
+    public function getVacantUnitsAttribute()
+    {
+        return $this->units - $this->getOccupiedUnitsAttribute();
+    }
+
+    public function getFullAddressAttribute()
+    {
+        $parts = array_filter([
+            $this->street_number,
+            $this->street_name ?: $this->street,
+            $this->estate ? $this->estate->name : null,
+        ]);
+        return implode(', ', $parts);
+    }
+
+    /**
+     * Get the landlord's name for display purposes.
+     */
+    public function getLandlordNameAttribute()
+    {
+        if ($this->landlord) {
+            if ($this->landlord->is_company) {
+                return $this->landlord->company_name . ' (Company)';
+            }
+            return $this->landlord->contact_person ??
+                   ($this->landlord->user ? $this->landlord->user->name : 'Unknown Landlord');
+        }
+        return 'No Landlord Assigned';
+    }
+
+    // Scopes
+    public function scopeAvailable($query)
+    {
+        return $query->where('status', 'available');
     }
 
     public function scopeOccupied($query)
     {
         return $query->where('status', 'occupied');
+    }
+
+    public function scopeVacant($query)
+    {
+        return $query->where('status', 'vacant');
     }
 
     public function scopeListed($query)
@@ -94,14 +173,51 @@ class Property extends Model
         return $query->where('estate_id', $estateId);
     }
 
-    // Helpers
-    public function isVacant()
+    /**
+     * Scope a query to only include properties owned by a specific landlord.
+     */
+    public function scopeByLandlord($query, $landlordId)
     {
-        return $this->status === 'vacant';
+        return $query->where('landlord_id', $landlordId);
+    }
+
+    public function scopeByType($query, $type)
+    {
+        return $query->where('property_type', $type);
+    }
+
+    // Helper Methods
+    public function isAvailable()
+    {
+        return $this->status === 'available';
     }
 
     public function isOccupied()
     {
         return $this->status === 'occupied';
+    }
+
+    public function isVacant()
+    {
+        return $this->status === 'vacant';
+    }
+
+    public function hasVacantUnits()
+    {
+        return $this->getVacantUnitsAttribute() > 0;
+    }
+
+    public function getOccupancyRate()
+    {
+        if ($this->units == 0) return 0;
+        return ($this->getOccupiedUnitsAttribute() / $this->units) * 100;
+    }
+
+    /**
+     * Check if property has a landlord assigned.
+     */
+    public function hasLandlord()
+    {
+        return $this->landlord_id !== null;
     }
 }

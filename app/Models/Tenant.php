@@ -39,7 +39,10 @@ class Tenant extends Model
     // Relationships
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withDefault([
+            'name' => 'No User Account',
+            'email' => null
+        ]);
     }
 
     public function property()
@@ -72,5 +75,64 @@ class Tenant extends Model
     public function hasGivenNotice()
     {
         return $this->status === 'notice_given';
+    }
+
+    public function hasLease()
+    {
+        return $this->lease_start_date && $this->lease_end_date;
+    }
+
+    public function getRemainingLeaseAttribute()
+    {
+        if (!$this->hasLease()) {
+            return null;
+        }
+
+        if (now()->gt($this->lease_end_date)) {
+            return 0;
+        }
+
+        return now()->diffInDays($this->lease_end_date);
+    }
+
+    public function getLeaseStatusAttribute()
+    {
+        if (!$this->hasLease()) {
+            return 'No Lease';
+        }
+
+        if (now()->lt($this->lease_start_date)) {
+            return 'Future Lease';
+        }
+
+        if (now()->gt($this->lease_end_date)) {
+            return 'Expired';
+        }
+
+        $percentComplete = $this->getLeasePercentCompleteAttribute();
+
+        if ($percentComplete < 25) {
+            return 'Early Stage';
+        } elseif ($percentComplete < 75) {
+            return 'Mid Lease';
+        } else {
+            return 'Late Stage';
+        }
+    }
+
+    public function getLeasePercentCompleteAttribute()
+    {
+        if (!$this->hasLease()) {
+            return 0;
+        }
+
+        $totalDays = $this->lease_end_date->diffInDays($this->lease_start_date);
+
+        if ($totalDays === 0) {
+            return 100;
+        }
+
+        $daysElapsed = now()->diffInDays($this->lease_start_date);
+        return min(100, max(0, ($daysElapsed / $totalDays) * 100));
     }
 }

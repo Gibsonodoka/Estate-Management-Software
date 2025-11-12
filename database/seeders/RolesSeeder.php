@@ -1,9 +1,5 @@
 <?php
 
-// ============================================
-// FILE: database/seeders/RolesSeeder.php
-// ============================================
-
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
@@ -87,82 +83,95 @@ class RolesSeeder extends Seeder
             'feature listings',
         ];
 
+        // Create permissions that don't already exist
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            $permissionExists = Permission::where('name', $permission)->exists();
+
+            if (!$permissionExists) {
+                $this->command->info("Creating permission: {$permission}");
+                Permission::create(['name' => $permission]);
+            } else {
+                $this->command->info("Permission already exists: {$permission}");
+            }
         }
 
-        // Create Roles and Assign Permissions
+        // Define roles and their permissions
+        $rolePermissions = [
+            'site_admin' => Permission::all()->pluck('name')->toArray(),
 
-        // Site Admin - Full access
-        $siteAdmin = Role::create(['name' => 'site_admin']);
-        $siteAdmin->givePermissionTo(Permission::all());
+            'estate_admin' => [
+                'view estates', 'edit estates',
+                'manage properties', 'view properties', 'create properties', 'edit properties', 'delete properties',
+                'manage users', 'view users', 'create users', 'edit users',
+                'manage tenants', 'view tenants', 'create tenants', 'edit tenants', 'delete tenants',
+                'manage payments', 'view payments', 'create payments', 'approve payments',
+                'manage announcements', 'view announcements', 'create announcements',
+                'manage maintenance', 'view maintenance',
+                'send messages', 'view messages',
+                'view reports', 'generate reports',
+            ],
 
-        // Estate Admin/Chairman
-        $estateAdmin = Role::create(['name' => 'estate_admin']);
-        $estateAdmin->givePermissionTo([
-            'view estates', 'edit estates',
-            'manage properties', 'view properties', 'create properties', 'edit properties', 'delete properties',
-            'manage users', 'view users', 'create users', 'edit users',
-            'manage tenants', 'view tenants', 'create tenants', 'edit tenants', 'delete tenants',
-            'manage payments', 'view payments', 'create payments', 'approve payments',
-            'manage announcements', 'view announcements', 'create announcements',
-            'manage maintenance', 'view maintenance',
-            'send messages', 'view messages',
-            'view reports', 'generate reports',
-        ]);
+            'landlord' => [
+                'view properties', 'edit properties',
+                'view tenants', 'create tenants', 'edit tenants',
+                'view payments',
+                'view announcements',
+                'view maintenance', 'manage maintenance',
+                'send messages', 'view messages',
+            ],
 
-        // Landlord
-        $landlord = Role::create(['name' => 'landlord']);
-        $landlord->givePermissionTo([
-            'view properties', 'edit properties',
-            'view tenants', 'create tenants', 'edit tenants',
-            'view payments',
-            'view announcements',
-            'view maintenance', 'manage maintenance',
-            'send messages', 'view messages',
-        ]);
+            'tenant' => [
+                'view properties',
+                'view payments',
+                'view announcements',
+                'create maintenance', 'view maintenance',
+                'send messages', 'view messages',
+            ],
 
-        // Tenant
-        $tenant = Role::create(['name' => 'tenant']);
-        $tenant->givePermissionTo([
-            'view properties',
-            'view payments',
-            'view announcements',
-            'create maintenance', 'view maintenance',
-            'send messages', 'view messages',
-        ]);
+            'security' => [
+                'manage visitors',
+                'check in visitors',
+                'check out visitors',
+                'view users',
+            ],
 
-        // Security
-        $security = Role::create(['name' => 'security']);
-        $security->givePermissionTo([
-            'manage visitors',
-            'check in visitors',
-            'check out visitors',
-            'view users',
-        ]);
+            'agent' => [
+                'create listings',
+                'manage listings',
+                'view agent earnings',
+            ],
 
-        // Agent
-        $agent = Role::create(['name' => 'agent']);
-        $agent->givePermissionTo([
-            'create listings',
-            'manage listings',
-            'view agent earnings',
-        ]);
+            'moderator' => [
+                'view estates',
+                'view properties',
+                'view users',
+                'view announcements',
+                'view reports',
+            ],
 
-        // Moderator
-        $moderator = Role::create(['name' => 'moderator']);
-        $moderator->givePermissionTo([
-            'view estates',
-            'view properties',
-            'view users',
-            'view announcements',
-            'view reports',
-        ]);
+            'user' => [
+                'view announcements',
+            ],
+        ];
 
-        // Regular User (just browsing platform)
-        $user = Role::create(['name' => 'user']);
-        $user->givePermissionTo([
-            'view announcements',
-        ]);
+        // Create roles that don't already exist and assign permissions
+        foreach ($rolePermissions as $roleName => $rolePerms) {
+            $roleExists = Role::where('name', $roleName)->exists();
+
+            if (!$roleExists) {
+                $this->command->info("Creating role: {$roleName}");
+                $role = Role::create(['name' => $roleName]);
+                $role->givePermissionTo($rolePerms);
+            } else {
+                $this->command->info("Role already exists: {$roleName}");
+                $role = Role::where('name', $roleName)->first();
+
+                // Update existing role's permissions
+                $this->command->info("Syncing permissions for: {$roleName}");
+                $role->syncPermissions($rolePerms);
+            }
+        }
+
+        $this->command->info("Roles and permissions seeded successfully!");
     }
 }

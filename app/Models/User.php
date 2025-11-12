@@ -1,9 +1,5 @@
 <?php
 
-// ============================================
-// FILE: app/Models/User.php (UPDATE EXISTING)
-// ============================================
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -54,8 +50,35 @@ class User extends Authenticatable
         return $this->hasMany(Estate::class, 'admin_id');
     }
 
+    /**
+     * Get the landlord record associated with this user.
+     */
+    public function landlordRecord()
+    {
+        return $this->hasOne(Landlord::class, 'user_id');
+    }
+
+    /**
+     * Get the properties associated with this user through their landlord record.
+     * This handles the transition from direct property relationship to
+     * going through the landlord model.
+     */
     public function properties()
     {
+        // If the user has a landlord record, get properties through that
+        if ($this->landlordRecord) {
+            return $this->hasManyThrough(
+                Property::class,
+                Landlord::class,
+                'user_id', // Foreign key on landlords table
+                'landlord_id', // Foreign key on properties table
+                'id', // Local key on users table
+                'id' // Local key on landlords table
+            );
+        }
+
+        // Legacy support for direct landlord relationship
+        // This will be used during migration and can be removed later
         return $this->hasMany(Property::class, 'landlord_id');
     }
 
@@ -89,6 +112,16 @@ class User extends Authenticatable
         return $this->hasOne(AgentProfile::class);
     }
 
+    /**
+     * Get the landlord profile for this user.
+     * This is an accessor that provides a convenient way to access
+     * the landlord record.
+     */
+    public function getLandlordProfileAttribute()
+    {
+        return $this->landlordRecord;
+    }
+
     // Scopes
     public function scopeActive($query)
     {
@@ -110,6 +143,14 @@ class User extends Authenticatable
         return $query->where('estate_id', $estateId);
     }
 
+    /**
+     * Scope to find users that have landlord records.
+     */
+    public function scopeLandlords($query)
+    {
+        return $query->whereHas('landlordRecord');
+    }
+
     // Helpers
     public function isSiteAdmin()
     {
@@ -123,7 +164,7 @@ class User extends Authenticatable
 
     public function isLandlord()
     {
-        return $this->role === 'landlord';
+        return $this->role === 'landlord' || $this->landlordRecord !== null;
     }
 
     public function isTenant()
@@ -139,5 +180,13 @@ class User extends Authenticatable
     public function isAgent()
     {
         return $this->role === 'agent';
+    }
+
+    /**
+     * Check if the user has a landlord profile.
+     */
+    public function hasLandlordProfile()
+    {
+        return $this->landlordRecord !== null;
     }
 }
