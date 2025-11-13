@@ -48,7 +48,7 @@
 
 <!-- Filter Section (Optional) -->
 <div class="bg-white rounded-lg shadow p-4 mb-6">
-    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
         <select name="status" class="px-4 py-2 border border-gray-300 rounded-lg">
             <option value="">All Status</option>
             <option value="available" {{ request('status') == 'available' ? 'selected' : '' }}>Available</option>
@@ -65,6 +65,18 @@
             <option value="flat" {{ request('property_type') == 'flat' ? 'selected' : '' }}>Flat</option>
             <option value="penthouse" {{ request('property_type') == 'penthouse' ? 'selected' : '' }}>Penthouse</option>
             <option value="studio" {{ request('property_type') == 'studio' ? 'selected' : '' }}>Studio</option>
+        </select>
+        <select name="landlord_id" class="px-4 py-2 border border-gray-300 rounded-lg">
+            <option value="">All Landlords</option>
+            @foreach($landlords ?? [] as $landlord)
+                <option value="{{ $landlord->id }}" {{ request('landlord_id') == $landlord->id ? 'selected' : '' }}>
+                    @if($landlord->is_company)
+                        {{ $landlord->company_name }} (Company)
+                    @else
+                        {{ $landlord->contact_person ?? ($landlord->user ? $landlord->user->name : 'Unknown') }}
+                    @endif
+                </option>
+            @endforeach
         </select>
         <select name="sort" class="px-4 py-2 border border-gray-300 rounded-lg">
             <option value="latest" {{ request('sort') == 'latest' ? 'selected' : '' }}>Newest First</option>
@@ -86,6 +98,7 @@
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S/N</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Landlord</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rent</th>
@@ -112,6 +125,27 @@
                                 <div class="text-xs text-gray-500">{{ $property->full_address ?: 'Address not set' }}</div>
                             </div>
                         </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        @if($property->landlord)
+                            <div class="text-sm text-gray-900">
+                                @if($property->landlord->is_company)
+                                    <span class="inline-flex items-center">
+                                        {{ $property->landlord->company_name }}
+                                        <span class="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-purple-100 text-purple-800">Company</span>
+                                    </span>
+                                @else
+                                    {{ $property->landlord->contact_person ?? ($property->landlord->user ? $property->landlord->user->name : 'Unknown') }}
+                                @endif
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                @if($property->landlord->phone)
+                                    <span class="mr-1">{{ $property->landlord->phone }}</span>
+                                @endif
+                            </div>
+                        @else
+                            <span class="text-gray-500">No landlord</span>
+                        @endif
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
@@ -166,7 +200,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="px-6 py-12 text-center">
+                    <td colspan="9" class="px-6 py-12 text-center">
                         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
                         </svg>
@@ -214,6 +248,24 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
                 <span>{{ $property->full_address ?: 'Address not set' }}</span>
+            </div>
+
+            <!-- Landlord Info -->
+            <div class="mt-2 flex items-center text-sm text-gray-600">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span>
+                    @if($property->landlord)
+                        @if($property->landlord->is_company)
+                            {{ $property->landlord->company_name }} <span class="text-xs text-purple-600">(Company)</span>
+                        @else
+                            {{ $property->landlord->contact_person ?? ($property->landlord->user ? $property->landlord->user->name : 'Unknown') }}
+                        @endif
+                    @else
+                        <span class="text-gray-500">No landlord assigned</span>
+                    @endif
+                </span>
             </div>
         </div>
 

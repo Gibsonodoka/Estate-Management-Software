@@ -12,7 +12,7 @@ class Property extends Model
 
     protected $fillable = [
         'estate_id',
-        'landlord_id', // Now references Landlord model instead of User model
+        'landlord_id', // Now references landlords table
         'property_name',
         'property_type',
         'units',
@@ -32,7 +32,12 @@ class Property extends Model
         'floor_number',
         'available_from',
         'is_listed',
-        'old_landlord_id', // Temporary field for migration
+        // Legacy fields
+        'old_property_number',
+        'old_bedrooms',
+        'old_bathrooms',
+        'size',
+        'old_rent_amount',
     ];
 
     protected $casts = [
@@ -56,7 +61,7 @@ class Property extends Model
 
     /**
      * Get the landlord that owns the property.
-     * Now references the Landlord model instead of User model.
+     * This now references the Landlord model instead of User model.
      */
     public function landlord()
     {
@@ -64,9 +69,8 @@ class Property extends Model
     }
 
     /**
-     * Get the landlord user associated with this property.
-     * This provides backward compatibility and a convenient way
-     * to access the user who is the landlord.
+     * Get the user associated with the landlord.
+     * Convenience method for backward compatibility.
      */
     public function landlordUser()
     {
@@ -133,7 +137,7 @@ class Property extends Model
     }
 
     /**
-     * Get the landlord's name for display purposes.
+     * Get the landlord's display name.
      */
     public function getLandlordNameAttribute()
     {
@@ -142,9 +146,9 @@ class Property extends Model
                 return $this->landlord->company_name . ' (Company)';
             }
             return $this->landlord->contact_person ??
-                   ($this->landlord->user ? $this->landlord->user->name : 'Unknown Landlord');
+                   ($this->landlord->user ? $this->landlord->user->name : 'Unknown');
         }
-        return 'No Landlord Assigned';
+        return 'No Landlord';
     }
 
     // Scopes

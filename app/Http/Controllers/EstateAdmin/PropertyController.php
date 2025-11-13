@@ -4,6 +4,7 @@ namespace App\Http\Controllers\EstateAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Property;
+use App\Models\Landlord;
 use Illuminate\Http\Request;
 
 class PropertyController extends Controller
@@ -20,12 +21,43 @@ class PropertyController extends Controller
                 ->with('error', 'No estate associated with this account.');
         }
 
-        $properties = Property::where('estate_id', $estate->id)
-            ->withCount('activeTenants')
-            ->latest()
-            ->paginate(15);
+        $query = Property::where('estate_id', $estate->id)
+            ->with(['landlord']) // Eager load landlord relationship
+            ->withCount('activeTenants');
 
-        return view('estate-admin.properties.index', compact('properties', 'estate'));
+        // Apply filters if any
+        if (request('status')) {
+            $query->where('status', request('status'));
+        }
+
+        if (request('property_type')) {
+            $query->where('property_type', request('property_type'));
+        }
+
+        if (request('landlord_id')) {
+            $query->where('landlord_id', request('landlord_id'));
+        }
+
+        // Apply sorting
+        if (request('sort') == 'oldest') {
+            $query->oldest();
+        } elseif (request('sort') == 'rent_asc') {
+            $query->orderBy('rent_amount_per_unit', 'asc');
+        } elseif (request('sort') == 'rent_desc') {
+            $query->orderBy('rent_amount_per_unit', 'desc');
+        } else {
+            $query->latest(); // Default: newest first
+        }
+
+        $properties = $query->paginate(15);
+
+        // Get landlords for the filter dropdown (only for this estate)
+        $landlords = Landlord::where('estate_id', $estate->id)
+                        ->with('user')
+                        ->orderBy('created_at', 'desc')
+                        ->get();
+
+        return view('estate-admin.properties.index', compact('properties', 'estate', 'landlords'));
     }
 
     /**
@@ -40,7 +72,13 @@ class PropertyController extends Controller
                 ->with('error', 'No estate associated with this account.');
         }
 
-        return view('estate-admin.properties.create', compact('estate'));
+        // Get landlords for this estate for the dropdown
+        $landlords = Landlord::where('estate_id', $estate->id)
+                        ->with('user')
+                        ->orderBy('created_at', 'desc')
+                        ->get();
+
+        return view('estate-admin.properties.create', compact('estate', 'landlords'));
     }
 
     /**
@@ -58,6 +96,7 @@ class PropertyController extends Controller
         $validated = $request->validate([
             'property_name' => 'required|string|max:255',
             'property_type' => 'required|string|in:apartment,duplex,bungalow,flat,penthouse,studio',
+            'landlord_id' => 'nullable|exists:landlords,id', // Now accepts landlord_id
             'units' => 'required|integer|min:1',
             'bedrooms_per_unit' => 'nullable|integer|min:0',
             'bathrooms_per_unit' => 'nullable|integer|min:0',
@@ -77,8 +116,18 @@ class PropertyController extends Controller
             'is_listed' => 'nullable|boolean',
         ]);
 
+        // Ensure the property belongs to the current estate
         $validated['estate_id'] = $estate->id;
-        $validated['landlord_id'] = auth()->id();
+
+        // Validate that landlord belongs to this estate if provided
+        if (!empty($validated['landlord_id'])) {
+            $landlord = Landlord::find($validated['landlord_id']);
+            if (!$landlord || $landlord->estate_id != $estate->id) {
+                return redirect()->back()
+                    ->with('error', 'Selected landlord is not associated with this estate.')
+                    ->withInput();
+            }
+        }
 
         Property::create($validated);
 
@@ -103,7 +152,13 @@ class PropertyController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        return view('estate-admin.properties.edit', compact('property', 'estate'));
+        // Get landlords for this estate for the dropdown
+        $landlords = Landlord::where('estate_id', $estate->id)
+                        ->with('user')
+                        ->orderBy('created_at', 'desc')
+                        ->get();
+
+        return view('estate-admin.properties.edit', compact('property', 'estate', 'landlords'));
     }
 
     /**
@@ -126,6 +181,7 @@ class PropertyController extends Controller
         $validated = $request->validate([
             'property_name' => 'required|string|max:255',
             'property_type' => 'required|string|in:apartment,duplex,bungalow,flat,penthouse,studio',
+            'landlord_id' => 'nullable|exists:landlords,id', // Now accepts landlord_id
             'units' => 'required|integer|min:1',
             'bedrooms_per_unit' => 'nullable|integer|min:0',
             'bathrooms_per_unit' => 'nullable|integer|min:0',
@@ -144,6 +200,16 @@ class PropertyController extends Controller
             'available_from' => 'nullable|date',
             'is_listed' => 'nullable|boolean',
         ]);
+
+        // Validate that landlord belongs to this estate if provided
+        if (!empty($validated['landlord_id'])) {
+            $landlord = Landlord::find($validated['landlord_id']);
+            if (!$landlord || $landlord->estate_id != $estate->id) {
+                return redirect()->back()
+                    ->with('error', 'Selected landlord is not associated with this estate.')
+                    ->withInput();
+            }
+        }
 
         $property->update($validated);
 

@@ -18,6 +18,36 @@
         @csrf
 
         <div class="space-y-6">
+            <!-- Landlord Selection -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Property Owner / Landlord</label>
+                <div class="flex space-x-3">
+                    <select name="landlord_id" id="landlord_id"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent @error('landlord_id') border-red-500 @enderror">
+                        <option value="">Select Landlord</option>
+                        @foreach($landlords as $landlord)
+                            <option value="{{ $landlord->id }}" {{ old('landlord_id') == $landlord->id ? 'selected' : '' }}>
+                                @if($landlord->is_company)
+                                    {{ $landlord->company_name }} (Company)
+                                @else
+                                    {{ $landlord->contact_person ?? ($landlord->user ? $landlord->user->name : 'Unknown') }}
+                                @endif
+                            </option>
+                        @endforeach
+                    </select>
+                    <a href="{{ route('estate.landlords.create') }}" class="flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                        <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        New Landlord
+                    </a>
+                </div>
+                @error('landlord_id')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+                <p class="mt-1.5 text-xs text-gray-500">Select the landlord who owns this property</p>
+            </div>
+
             <!-- Property Name and Type -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
